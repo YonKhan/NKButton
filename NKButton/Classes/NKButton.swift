@@ -287,6 +287,7 @@ open class NKButton: UIButton {
     fileprivate var loadingView     : UIActivityIndicatorView? = nil
     #endif
     fileprivate let shadowLayer     = CAShapeLayer()
+    fileprivate let imageShadowLayer = CAShapeLayer()
     fileprivate let backgroundLayer = CAShapeLayer()
     fileprivate let flashLayer         = CAShapeLayer()
     fileprivate let gradientLayer    = CAGradientLayer()
@@ -296,6 +297,7 @@ open class NKButton: UIButton {
     fileprivate var borderColorDict        : [String : UIColor] = [:]
     fileprivate var imgBorderColorDict  : [String : UIColor] = [:]
     fileprivate var shadowColorDict        : [String : UIColor] = [:]
+    fileprivate var imgShadowColorDict        : [String : UIColor] = [:]
     fileprivate var gradientColorDict    : [String : [UIColor]] = [:]
     fileprivate var borderSizeDict        : [String : CGFloat] = [:]
     fileprivate var imgBorderSizeDict   : [String : CGFloat] = [:]
@@ -341,6 +343,7 @@ open class NKButton: UIButton {
         contentEdgeInsets = .zero
 
         layer.addSublayer(shadowLayer)
+        layer.addSublayer(imageShadowLayer)
         layer.addSublayer(backgroundLayer)
         layer.addSublayer(flashLayer)
         layer.addSublayer(gradientLayer)
@@ -440,7 +443,8 @@ open class NKButton: UIButton {
         flashLayer.path                 = path
         flashLayer.fillColor             = flashColor.cgColor
 
-        if let shadowColor = shadowColor(for: currentState) {
+        if let shadowColor = shadowColor(for: currentState),
+           shadowColor != .clear {
             shadowLayer.isHidden         = false
             shadowLayer.path             = path
             shadowLayer.shadowPath         = path
@@ -452,6 +456,23 @@ open class NKButton: UIButton {
         }
         else {
             shadowLayer.isHidden = true
+        }
+
+        if let imageShadowColor = imageShadowColor(for: currentState),
+           imageShadowColor != .clear {
+            let imageRoundedPath = UIBezierPath(roundedRect: imageView?.frame ?? .zero,
+                                                cornerRadius: imageView?.layer.cornerRadius ?? 0.0)
+            imageShadowLayer.isHidden      = false
+            imageShadowLayer.path          = imageRoundedPath.cgPath
+            imageShadowLayer.shadowPath    = imageRoundedPath.cgPath
+            imageShadowLayer.fillColor     = imageShadowColor.cgColor
+            imageShadowLayer.shadowColor   = imageShadowColor.cgColor
+            imageShadowLayer.shadowRadius  = shadowRadius
+            imageShadowLayer.shadowOpacity = shadowOpacity
+            imageShadowLayer.shadowOffset  = shadowOffset
+        }
+        else {
+            imageShadowLayer.isHidden = true
         }
 
         if let gradientColors = gradientColor(for: currentState) {
@@ -486,6 +507,7 @@ open class NKButton: UIButton {
         let viewSize = bounds.size
 
         shadowLayer.frame = bounds
+        imageShadowLayer.frame = imageView?.bounds ?? .zero
         backgroundLayer.frame = bounds
         flashLayer.frame = bounds
         gradientLayer.frame = bounds
@@ -783,6 +805,12 @@ open class NKButton: UIButton {
         setNeedsDisplay()
     }
 
+    open func setImageShadowColor(_ color: UIColor?, for state: UIControl.State) {
+        let key = imageShadowColorKey(for: state)
+        imgShadowColorDict[key] = color
+        setNeedsDisplay()
+    }
+
     open func setGradientColor(_ colors: [UIColor]?, for state: UIControl.State) {
         let key = gradientColorKey(for: state)
         gradientColorDict[key] = colors
@@ -865,6 +893,11 @@ open class NKButton: UIButton {
         return shadowColorDict[key]
     }
 
+    open func imageShadowColor(for state: UIControl.State) -> UIColor? {
+        let key = imageShadowColorKey(for: state)
+        return imgShadowColorDict[key]
+    }
+
     open func gradientColor(for state: UIControl.State) -> [UIColor]? {
         let key = gradientColorKey(for: state)
         return gradientColorDict[key]
@@ -905,6 +938,10 @@ open class NKButton: UIButton {
 
     fileprivate func shadowColorKey(for state: UIControl.State) -> String {
         return "sd\(state.rawValue)"
+    }
+
+    fileprivate func imageShadowColorKey(for state: UIControl.State) -> String {
+        return "imgsd\(state.rawValue)"
     }
 
     fileprivate func gradientColorKey(for state: UIControl.State) -> String {
@@ -957,7 +994,6 @@ open class NKButton: UIButton {
 
     fileprivate func transition(toCircle: Bool) {
         backgroundLayer.removeAllAnimations()
-        shadowLayer.removeAllAnimations()
 
         let animation = CABasicAnimation(keyPath: "bounds.size.width")
 
@@ -995,7 +1031,6 @@ open class NKButton: UIButton {
         animation.isRemovedOnCompletion = false
 
         backgroundLayer.add(animation, forKey: animation.keyPath)
-        shadowLayer.add(animation, forKey: animation.keyPath)
         gradientLayer.add(animation, forKey: animation.keyPath)
         flashLayer.add(animation, forKey: animation.keyPath)
     }
@@ -1008,7 +1043,6 @@ open class NKButton: UIButton {
 
     deinit {
         backgroundLayer.removeAllAnimations()
-        shadowLayer.removeAllAnimations()
         gradientLayer.removeAllAnimations()
         flashLayer.removeAllAnimations()
     }
